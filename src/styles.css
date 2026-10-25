@@ -342,3 +342,11 @@ pre.code { white-space: pre; overflow-x: auto; font-size: 11px; background: var(
 .toast .icon-btn { color: var(--bg); font-size: 16px; width: 32px; height: 32px; }
 ol.steps { padding-left: 1.4em; margin: 4px 0; display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 1.6; }
 ol.steps .btn { margin-bottom: 4px; }
+
+/* 収支の内訳 */
+.flow { display: flex; flex-direction: column; margin-top: 8px; background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+.flow-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 6px; }
+.flow-row:first-child { margin-top: 0; }
+.flow-row strong { font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.flow-row.total { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; font-weight: 700; }
+.flow-row.total strong { font-size: 20px; }

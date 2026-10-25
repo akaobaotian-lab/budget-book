@@ -12,7 +12,9 @@ export interface MonthSummary {
   /** 収入（給与・副業・その他。返済・競馬払戻は含まない） */
   income: number;
   repay: number;
-  /** 収入 + 返済 + 払戻 − 支出総額 */
+  /** 入ってきたお金の合計（収入 + 返してもらったお金 + 競馬の払戻） */
+  totalIn: number;
+  /** 収支 = 入ってきたお金 − 出ていったお金（支出総額） */
   balance: number;
 }
 
@@ -27,7 +29,7 @@ export function outflow(t: Transaction): number {
 
 export function summarizeMonth(txs: Transaction[], month: string): MonthSummary {
   const s: MonthSummary = {
-    totalOut: 0, personal: 0, living: 0, lend: 0, keibaPurchase: 0, keibaPayout: 0, income: 0, repay: 0, balance: 0,
+    totalOut: 0, personal: 0, living: 0, lend: 0, keibaPurchase: 0, keibaPayout: 0, income: 0, repay: 0, totalIn: 0, balance: 0,
   };
   for (const t of inMonth(txs, month)) {
     switch (t.kind) {
@@ -51,7 +53,8 @@ export function summarizeMonth(txs: Transaction[], month: string): MonthSummary 
     }
   }
   s.totalOut = s.personal + s.living + s.lend + s.keibaPurchase;
-  s.balance = s.income + s.repay + s.keibaPayout - s.totalOut;
+  s.totalIn = s.income + s.repay + s.keibaPayout;
+  s.balance = s.totalIn - s.totalOut;
   return s;
 }
 

@@ -169,7 +169,9 @@ describe('summary', () => {
   it('month totals include lending and keiba purchase', () => {
     const s = summarizeMonth(txs, '2026-10');
     expect(s.totalOut).toBe(6500);
-    expect(s.balance).toBe(1000 + 5000 - 6500);
+    // 入ってきたお金 = 返済 1000 + 競馬の払戻 5000
+    expect(s.totalIn).toBe(6000);
+    expect(s.balance).toBe(s.totalIn - s.totalOut);
   });
   it('daily includes lending', () => {
     expect(dailyBreakdown(txs, '2026-10')[2].lend).toBe(3000);

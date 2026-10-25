@@ -43,6 +43,36 @@ function Stat({ label, value, color, sub }: { label: string; value: string; colo
 
 /* ---------------- ホーム ---------------- */
 
+/** 0円の項目を除いた内訳の文 */
+function breakdown(items: [string, number][]): string {
+  const parts = items.filter(([, v]) => v > 0).map(([k, v]) => `${k} ${yen(v)}`);
+  return parts.length ? parts.join(' ＋ ') : 'なし';
+}
+
+/** 入ってきたお金 − 出ていったお金 ＝ 収支 を、内訳つきで表示 */
+function MoneyFlow({ s }: { s: ReturnType<typeof summarizeMonth> }) {
+  return (
+    <div className="flow">
+      <div className="flow-row">
+        <span>入ってきたお金</span>
+        <strong className="plus">{yen(s.totalIn)}</strong>
+      </div>
+      <small className="muted">{breakdown([['収入', s.income], ['返してもらった', s.repay], ['競馬の払戻', s.keibaPayout]])}</small>
+      <div className="flow-row">
+        <span>出ていったお金</span>
+        <strong className="minus">−{yen(s.totalOut)}</strong>
+      </div>
+      <small className="muted">
+        {breakdown([['自分', s.personal], ['生活費', s.living], ['貸した', s.lend], ['競馬の購入', s.keibaPurchase]])}
+      </small>
+      <div className="flow-row total">
+        <span>収支（入 − 出）</span>
+        <strong className={s.balance >= 0 ? 'plus' : 'minus'}>{s.balance > 0 ? '+' : s.balance < 0 ? '−' : ''}{yen(Math.abs(s.balance))}</strong>
+      </div>
+    </div>
+  );
+}
+
 export function HomePage({ month, onEdit, onAdd, go }: PageProps) {
   const { data } = useStore();
   const txs = data.transactions;
@@ -57,10 +87,7 @@ export function HomePage({ month, onEdit, onAdd, go }: PageProps) {
       <section className="card hero">
         <span className="muted">{formatMonth(month)}の支出総額</span>
         <strong className="hero-num">{yen(s.totalOut)}</strong>
-        <div className="hero-sub">
-          <span>収入 {yen(s.income)}</span>
-          <span className={s.balance >= 0 ? 'plus' : 'minus'}>収支 {signedYen(s.balance)}</span>
-        </div>
+        <MoneyFlow s={s} />
         <div className="stats">
           <Stat label="自分の買い物" value={yen(s.personal)} color={COLORS.personal} />
           <Stat label="生活費" value={yen(s.living)} color={COLORS.living} />
@@ -210,30 +237,31 @@ export function ReportPage({ month }: PageProps) {
       </section>
 
       <section className="card">
-        <h3>月ごとの収入と支出</h3>
+        <h3>月ごとの入ってきたお金と出ていったお金</h3>
         <BarChart
           labels={months.map((m) => `${Number(m.slice(5))}月`)}
           series={[
-            { label: '収入', data: sums.map((s) => s.income), color: COLORS.income },
-            { label: '支出', data: sums.map((s) => s.totalOut), color: COLORS.out },
+            { label: '入ってきたお金', data: sums.map((s) => s.totalIn), color: COLORS.income },
+            { label: '出ていったお金', data: sums.map((s) => s.totalOut), color: COLORS.out },
           ]}
         />
         <table className="table">
-          <thead><tr><th>月</th><th>収入</th><th>支出</th><th>収支</th></tr></thead>
+          <thead><tr><th>月</th><th>入ってきた</th><th>出ていった</th><th>収支</th></tr></thead>
           <tbody>
             {months.slice().reverse().map((m, i) => {
               const s = sums[11 - i];
               return (
                 <tr key={m}>
                   <td>{formatMonth(m)}</td>
-                  <td className="num">{yen(s.income)}</td>
+                  <td className="num">{yen(s.totalIn)}</td>
                   <td className="num">{yen(s.totalOut)}</td>
-                  <td className={`num ${s.balance >= 0 ? 'plus' : 'minus'}`}>{signedYen(s.balance)}</td>
+                  <td className={`num ${s.balance >= 0 ? 'plus' : 'minus'}`}>{s.balance > 0 ? '+' : s.balance < 0 ? '−' : ''}{yen(Math.abs(s.balance))}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+        <p className="muted small">入ってきたお金＝収入＋返してもらったお金＋競馬の払戻 ／ 出ていったお金＝自分の買い物＋生活費＋貸したお金＋競馬の購入</p>
       </section>
 
       <section className="card">
