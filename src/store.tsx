@@ -9,7 +9,7 @@ const STORAGE_KEY = 'budget-book-v1';
 
 export const DEFAULT_SETTINGS: Settings = {
   tax: { salaried: true, salaryAnnual: 4_000_000, socialInsuranceRate: 0.15, otherDeductions: 0 },
-  gmail: { clientId: '', email: '', query: DEFAULT_GMAIL_QUERY },
+  gmail: { method: 'script', scriptUrl: '', scriptToken: '', autoImport: true, clientId: '', email: '', query: DEFAULT_GMAIL_QUERY },
 };
 
 function emptyData(): AppData {
@@ -24,7 +24,12 @@ export function normalizeData(raw: unknown): AppData {
     recurring: Array.isArray(d.recurring) ? d.recurring : [],
     settings: {
       tax: { ...DEFAULT_SETTINGS.tax, ...d.settings?.tax },
-      gmail: { ...DEFAULT_SETTINGS.gmail, ...d.settings?.gmail },
+      gmail: {
+        ...DEFAULT_SETTINGS.gmail,
+        // 以前の版で Google Cloud の方法を設定済みの場合はその方法を続ける
+        ...(d.settings?.gmail?.clientId && d.settings.gmail.email && !d.settings.gmail.method ? { method: 'oauth' as const } : {}),
+        ...d.settings?.gmail,
+      },
     },
   };
 }
@@ -50,7 +55,8 @@ function applyRecurring(data: AppData): AppData {
 /** クラウドから受け取ったデータの整形と固定費の自動記入 */
 const fromRemote = (d: AppData) => applyRecurring(normalizeData(d));
 
-export type NewTransaction = Omit<Transaction, 'id' | 'createdAt'>;
+/** 追加する明細。id を指定すると、同じ id の明細がすでにあれば追加しない（重複防止） */
+export type NewTransaction = Omit<Transaction, 'id' | 'createdAt'> & { id?: string };
 
 interface Store {
   data: AppData;
@@ -91,10 +97,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const addTransactions = useCallback((txs: NewTransaction[]) => {
     const now = Date.now();
-    setData((d) => ({
-      ...d,
-      transactions: [...d.transactions, ...txs.map((t, i) => ({ ...t, id: uid(), createdAt: now + i }))],
-    }));
+    setData((d) => {
+      const ids = new Set(d.transactions.map((t) => t.id));
+      const gmailIds = new Set(d.transactions.map((t) => t.gmailId).filter(Boolean));
+      const fresh = txs.filter((t) => !(t.id && ids.has(t.id)) && !(t.gmailId && gmailIds.has(t.gmailId)));
+      if (fresh.length === 0) return d;
+      return { ...d, transactions: [...d.transactions, ...fresh.map((t, i) => ({ ...t, id: t.id ?? uid(), createdAt: now + i }))] };
+    });
   }, []);
 
   const updateTransaction = useCallback((id: string, patch: Partial<Transaction>) => {

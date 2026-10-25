@@ -330,3 +330,15 @@ pre.code { white-space: pre; overflow-x: auto; font-size: 11px; background: var(
 .danger-link { color: var(--minus); margin-top: 8px; }
 .form-actions .link { white-space: nowrap; }
 .shortcut-btn { margin: 8px 0 4px; white-space: normal; }
+
+/* お知らせ */
+.toast {
+  position: fixed; left: 16px; right: 96px; bottom: calc(24px + env(safe-area-inset-bottom)); z-index: 15;
+  max-width: 520px; display: flex; align-items: center; gap: 4px;
+  background: var(--text); color: var(--bg); padding: 6px 6px 6px 14px; border-radius: 12px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.25); font-size: 14px;
+}
+.toast .link { color: var(--accent-soft); font-weight: 600; }
+.toast .icon-btn { color: var(--bg); font-size: 16px; width: 32px; height: 32px; }
+ol.steps { padding-left: 1.4em; margin: 4px 0; display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 1.6; }
+ol.steps .btn { margin-bottom: 4px; }

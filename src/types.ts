@@ -73,6 +73,16 @@ export interface TaxSettings {
 }
 
 export interface GmailSettings {
+  /** 取り込み方法：Apps Script（かんたん）/ Google Cloud の OAuth */
+  method: 'script' | 'oauth';
+  /** Apps Script ウェブアプリのURL */
+  scriptUrl: string;
+  /** Apps Script に埋め込む合言葉 */
+  scriptToken: string;
+  /** アプリを開いたときに自動で取り込む（Apps Script のみ） */
+  autoImport: boolean;
+  /** 自動取り込みの対象にする利用日（この日以降。接続した日を入れる） */
+  autoSince?: string;
   /** Google Cloud で発行した OAuth クライアントID */
   clientId: string;
   /** 家計簿に登録した Gmail アドレス */

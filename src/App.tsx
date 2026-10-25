@@ -8,6 +8,7 @@ import { RecurringPage } from './components/RecurringPage';
 import { SettingsPage } from './components/SettingsPage';
 import { InstallButton } from './components/InstallSection';
 import { SyncBadge } from './components/SyncSection';
+import { useGmailAutoImport } from './lib/useGmailAutoImport';
 
 // 他の端末の「接続」QRコードから開かれた場合は、ログインのため設定画面を表示する
 const openedForSync = location.hash.includes('sync=');
@@ -65,6 +66,7 @@ export function App() {
   const [tab, setTab] = useState<Tab>(openedForSync ? 'settings' : 'home');
   const [month, setMonth] = useState(currentMonth());
   const [entry, setEntry] = useState<Entry>(initialEntry);
+  const [gmailMessage, clearGmailMessage] = useGmailAutoImport();
 
   useEffect(() => {
     history.replaceState({ tab } satisfies NavState, '');
@@ -138,6 +140,14 @@ export function App() {
         {tab === 'recurring' && <RecurringPage />}
         {tab === 'settings' && <SettingsPage />}
       </main>
+
+      {gmailMessage && (
+        <div className="toast" role="status">
+          <span className="grow">{gmailMessage}</span>
+          <button type="button" className="link" onClick={() => { clearGmailMessage(); go('list'); }}>見る</button>
+          <button type="button" className="icon-btn" onClick={clearGmailMessage} aria-label="閉じる">✕</button>
+        </div>
+      )}
 
       <button type="button" className="fab" onClick={() => setEntry({})} aria-label="明細を追加">＋</button>
 

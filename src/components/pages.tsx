@@ -87,7 +87,16 @@ export function HomePage({ month, onEdit, onAdd, go }: PageProps) {
       <div className="quick">
         <button type="button" className="btn" onClick={() => onAdd('expense', 'voice')}>🎤 音声で入力</button>
         <button type="button" className="btn" onClick={() => onAdd('expense', 'receipt')}>📷 レシート</button>
-        <button type="button" className="btn" onClick={() => go('settings')}>✉️ Gmail取り込み</button>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            go('settings');
+            setTimeout(() => document.getElementById('gmail')?.scrollIntoView({ behavior: 'smooth' }), 50);
+          }}
+        >
+          ✉️ Gmail取り込み
+        </button>
       </div>
 
       <section className="card">
