@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ExpenseGroup, IncomeType, Kind, Source, Transaction } from '../types';
 import { EXPENSE_CATEGORIES, GROUP_LABEL, INCOME_LABEL, KIND_LABEL, defaultGroupFor, guessCategory } from '../lib/categories';
 import { today } from '../lib/date';
-import { parseVoiceText } from '../lib/voiceParser';
+import { parseVoiceText, type ParsedEntry } from '../lib/voiceParser';
+import { parseSharedText } from '../lib/shareParser';
 import { useStore, type NewTransaction } from '../store';
 import { VoiceButton } from './VoiceButton';
 import { ReceiptScanner } from './ReceiptScanner';
@@ -11,6 +12,10 @@ interface Props {
   editing?: Transaction | null;
   initialKind?: Kind;
   initialMode?: 'manual' | 'voice' | 'receipt';
+  /** 共有メニューから送られた写真（レシートとして読み取る） */
+  sharedImage?: File;
+  /** 共有メニューから送られたテキスト */
+  sharedText?: string;
   onClose(): void;
 }
 
@@ -55,11 +60,12 @@ const KINDS: Kind[] = ['expense', 'income', 'lend', 'repay', 'keiba'];
 
 const num = (s: string) => Math.max(0, Math.round(Number(s.replace(/[,，]/g, '')) || 0));
 
-export function EntryForm({ editing, initialKind = 'expense', initialMode = 'manual', onClose }: Props) {
+export function EntryForm({ editing, initialKind = 'expense', initialMode = 'manual', sharedImage, sharedText, onClose }: Props) {
   const { data, addTransactions, updateTransaction, deleteTransaction } = useStore();
   const [f, setF] = useState<FormState>(() => (editing ? fromTx(editing) : blank(initialKind)));
-  const [mode, setMode] = useState(editing ? 'manual' : initialMode);
+  const [mode, setMode] = useState(editing ? 'manual' : sharedImage ? 'receipt' : initialMode);
   const [heard, setHeard] = useState('');
+  const [heardFrom, setHeardFrom] = useState<'voice' | 'share'>('voice');
   const [error, setError] = useState('');
   const [categoryTouched, setCategoryTouched] = useState(!!editing);
   const amountRef = useRef<HTMLInputElement>(null);
@@ -90,9 +96,9 @@ export function EntryForm({ editing, initialKind = 'expense', initialMode = 'man
     });
   };
 
-  const onVoice = (text: string) => {
+  const applyParsed = (text: string, p: ParsedEntry, from: 'voice' | 'share') => {
     setHeard(text);
-    const p = parseVoiceText(text);
+    setHeardFrom(from);
     setF((prev) => ({
       ...prev,
       kind: p.kind,
@@ -104,11 +110,19 @@ export function EntryForm({ editing, initialKind = 'expense', initialMode = 'man
       incomeType: p.incomeType ?? prev.incomeType,
       person: p.person ?? prev.person,
       payout: p.payout ? String(p.payout) : prev.payout,
-      source: 'voice',
+      source: from === 'voice' ? 'voice' : 'manual',
     }));
     setCategoryTouched(true);
     setMode('manual');
   };
+
+  const onVoice = (text: string) => applyParsed(text, parseVoiceText(text), 'voice');
+
+  // 共有メニューから送られたテキストを読み取る
+  useEffect(() => {
+    if (sharedText && !editing) applyParsed(sharedText, parseSharedText(sharedText), 'share');
+    // 最初に開いたときだけ
+  }, []);
 
   const onReceipt = (r: { date: string | null; amount: number | null; store: string; category: string }) => {
     setF((prev) => ({
@@ -170,11 +184,15 @@ export function EntryForm({ editing, initialKind = 'expense', initialMode = 'man
         )}
 
         {mode === 'voice' && <VoiceButton onResult={onVoice} />}
-        {mode === 'receipt' && <ReceiptScanner onResult={onReceipt} />}
+        {mode === 'receipt' && <ReceiptScanner onResult={onReceipt} initialFile={sharedImage} />}
 
         {mode === 'manual' && (
           <form onSubmit={submit} className="form">
-            {heard && <p className="hint">🎤「{heard}」から入力しました。内容を確認してください。</p>}
+            {heard && (
+              <p className="hint">
+                {heardFrom === 'voice' ? '🎤' : '📤 共有された'}「{heard.length > 60 ? `${heard.slice(0, 60)}…` : heard}」から入力しました。内容を確認してください。
+              </p>
+            )}
             {f.source === 'receipt' && !editing && <p className="hint">📷 レシートから読み取りました。内容を確認してください。</p>}
 
             <div className="chips">

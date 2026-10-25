@@ -178,3 +178,22 @@ describe('summary', () => {
     expect(lendingByPerson(txs)[0]).toMatchObject({ person: '田中', lent: 3000, repaid: 1000, outstanding: 2000 });
   });
 });
+
+import { parseSharedText } from './shareParser';
+
+describe('parseSharedText', () => {
+  it('reads a shared card notification', () => {
+    const text = `【楽天カード】カード利用のお知らせ
+■利用日: 2026/10/24
+■利用先: ローソン
+■利用金額: 648 円`;
+    expect(parseSharedText(text, '2026-10-25')).toMatchObject({ kind: 'expense', date: '2026-10-24', amount: 648, memo: 'ローソン', category: '食費', group: 'living' });
+  });
+  it('reads a one-line card push notification', () => {
+    expect(parseSharedText('三井住友カード ご利用のお知らせ ご利用金額：1,280円 ご利用先：スターバックス', '2026-10-25')).toMatchObject({ kind: 'expense', amount: 1280, memo: 'スターバックス', category: '外食' });
+    expect(parseSharedText('【楽天カード】カード利用のお知らせ ■利用日: 2026/10/24 ■利用先: ローソン ■利用金額: 648 円', '2026-10-25')).toMatchObject({ date: '2026-10-24', amount: 648, memo: 'ローソン' });
+  });
+  it('falls back to the voice-style parser', () => {
+    expect(parseSharedText('昨日 田中さんに 2000円 貸した', '2026-10-25')).toMatchObject({ kind: 'lend', date: '2026-10-24', amount: 2000, person: '田中' });
+  });
+});

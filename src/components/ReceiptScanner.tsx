@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { parseReceiptText, type ParsedReceipt } from '../lib/receiptParser';
 // OCRエンジンと日本語データはアプリに同梱し、外部CDNに依存しない
 import workerPath from 'tesseract.js/dist/worker.min.js?url';
@@ -17,7 +17,7 @@ async function preprocess(file: File): Promise<HTMLCanvasElement> {
   return canvas;
 }
 
-export function ReceiptScanner({ onResult }: { onResult(r: ParsedReceipt): void }) {
+export function ReceiptScanner({ onResult, initialFile }: { onResult(r: ParsedReceipt): void; initialFile?: File }) {
   const [preview, setPreview] = useState('');
   const [progress, setProgress] = useState<number | null>(null);
   const [status, setStatus] = useState('');
@@ -62,6 +62,15 @@ export function ReceiptScanner({ onResult }: { onResult(r: ParsedReceipt): void 
       setError(`読み取りに失敗しました: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
+
+  // 共有メニューから送られた写真はすぐに読み取る
+  const startedWith = useRef<File | null>(null);
+  useEffect(() => {
+    if (initialFile && startedWith.current !== initialFile) {
+      startedWith.current = initialFile;
+      onFile(initialFile);
+    }
+  }, [initialFile]);
 
   return (
     <div className="receipt">

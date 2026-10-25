@@ -3,10 +3,10 @@ import QRCode from 'qrcode';
 import { appUrl, detectPlatform, useInstall, type Platform } from '../lib/install';
 
 const PLATFORM_LABEL: Record<Platform, string> = {
+  android: 'Android スマホ',
   windows: 'Windows パソコン',
   mac: 'Mac',
   ios: 'iPhone / iPad',
-  android: 'Android スマホ',
   other: 'パソコン',
 };
 
@@ -47,9 +47,13 @@ function Steps({ platform }: { platform: Platform }) {
     case 'android':
       return (
         <ol>
-          <li>Chrome でこのページを開き、上の「インストール」ボタンを押す</li>
-          <li>ボタンが無い場合は右上の ⋮ →「アプリをインストール」または「ホーム画面に追加」</li>
-          <li>ホーム画面とアプリ一覧に「家計簿」が追加されます</li>
+          <li><strong>Chrome</strong> でこのページを開き、上の「このスマホにインストール」ボタンを押す（ボタンが無い場合は右上の ⋮ →「アプリをインストール」）</li>
+          <li>ホーム画面とアプリ一覧に「家計簿」が追加され、ほかのアプリと同じように起動できます</li>
+          <li>アイコンを長押しすると「明細を追加」「音声で入力」「レシートを撮影」をすぐ開けます</li>
+          <li>
+            <strong>共有メニューから記録</strong>：ギャラリーのレシート写真や、カード利用通知（Gmail アプリ・LINE など）の文章を
+            「共有」→「家計簿」で送ると、読み取って入力画面が開きます
+          </li>
         </ol>
       );
     default:
@@ -92,7 +96,7 @@ export function InstallSection() {
       )}
 
       <div className="seg small install-tabs">
-        {(['windows', 'mac', 'ios', 'android'] as Platform[]).map((p) => (
+        {(['android', 'windows', 'mac', 'ios'] as Platform[]).map((p) => (
           <button type="button" key={p} className={platform === p ? 'on' : ''} onClick={() => setPlatform(p)}>
             {PLATFORM_LABEL[p]}
           </button>
@@ -104,8 +108,8 @@ export function InstallSection() {
         <div className="qr">
           {qr && <img src={qr} alt="スマホ用のQRコード" width={180} height={180} />}
           <div>
-            <strong>スマホで取得する</strong>
-            <p className="small muted">スマホのカメラでQRコードを読み取ってアプリのページを開き、上の「iPhone / iPad」または「Android スマホ」の手順で追加してください。</p>
+            <strong>Android スマホで取得する</strong>
+            <p className="small muted">スマホのカメラ（または Google レンズ）でQRコードを読み取って Chrome で開き、「インストール」を押してください（上の「Android スマホ」の手順）。</p>
             <code className="small">{url}</code>
             {isLocal && <p className="small error">※ 今はこのパソコン内のアドレスです。スマホで使うには公開URL（GitHub Pages）から開いてください。</p>}
           </div>
