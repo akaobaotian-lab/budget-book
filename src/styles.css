@@ -329,3 +329,4 @@ pre.code { white-space: pre; overflow-x: auto; font-size: 11px; background: var(
 .sync-badge.muted { color: var(--muted); }
 .danger-link { color: var(--minus); margin-top: 8px; }
 .form-actions .link { white-space: nowrap; }
+.shortcut-btn { margin: 8px 0 4px; white-space: normal; }

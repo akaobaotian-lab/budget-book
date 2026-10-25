@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { appUrl, detectPlatform, useInstall, type Platform } from '../lib/install';
+import { windowsShortcutCmd } from '../lib/desktopShortcut';
 
 const PLATFORM_LABEL: Record<Platform, string> = {
   android: 'Android スマホ',
@@ -15,12 +16,18 @@ function Steps({ platform }: { platform: Platform }) {
     case 'windows':
       return (
         <ol>
-          <li>Chrome または Edge でこのページを開き、上の「インストール」ボタンを押す（アドレスバー右端の 🖥️⤓ アイコンでも可）</li>
-          <li>家計簿が専用ウィンドウで開き、スタートメニューとタスクバーに追加されます</li>
           <li>
-            <strong>デスクトップにショートカットを作る</strong>
-            <br />Edge：インストール時に表示される「デスクトップ ショートカットを作成する」にチェック
-            <br />Chrome：通常は自動で作成されます。無い場合はアドレスバーに <code>chrome://apps</code> と入力 → 家計簿を右クリック →「ショートカットを作成」→「デスクトップ」にチェック
+            <strong>デスクトップにショートカットを作る</strong>：下のボタンでファイルを保存し、保存したファイルをダブルクリック
+            <br />
+            <DesktopShortcutButton />
+            <br />
+            <small className="muted">
+              「WindowsによってPCが保護されました」と表示されたら「詳細情報」→「実行」を押してください（ショートカットを作るだけのファイルです）。
+              デスクトップの「家計簿」から、アプリ専用のウィンドウで開きます。
+            </small>
+          </li>
+          <li>
+            スタートメニューやタスクバーにも入れたい場合は、Chrome または Edge で上の「インストール」ボタン（アドレスバー右端のインストールアイコン）も押してください
           </li>
         </ol>
       );
@@ -63,6 +70,24 @@ function Steps({ platform }: { platform: Platform }) {
         </ol>
       );
   }
+}
+
+/** Windows のデスクトップにショートカットを作るファイルを保存する */
+export function DesktopShortcutButton() {
+  const save = () => {
+    const url = appUrl();
+    const cmd = windowsShortcutCmd(url, new URL('icons/kakeibo.ico', url).href);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([cmd], { type: 'application/octet-stream' }));
+    a.download = 'kakeibo-shortcut.cmd';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  return (
+    <button type="button" className="btn primary shortcut-btn" onClick={save}>
+      🖥️ デスクトップにショートカットを作る（Windows）
+    </button>
+  );
 }
 
 export function InstallSection() {
