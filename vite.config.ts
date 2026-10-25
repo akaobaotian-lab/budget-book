@@ -58,4 +58,6 @@ export default defineConfig({
   ],
   // GitHub Pages などサブパスでも動くよう相対パスで出力
   base: './',
+  // 設定画面に表示するアプリのバージョン（公開した日時）
+  define: { __BUILD_TIME__: JSON.stringify(new Date().toISOString()) },
 });

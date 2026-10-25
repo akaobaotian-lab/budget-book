@@ -368,3 +368,4 @@ ol.steps .btn { margin-bottom: 4px; }
 .balance-line strong { font-size: 18px; }
 .balance-line.plus strong { color: var(--plus); }
 .balance-line.minus strong { color: var(--minus); }
+.version { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; }

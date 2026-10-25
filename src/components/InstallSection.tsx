@@ -144,7 +144,47 @@ export function InstallSection() {
       <p className="muted small">
         ※ パソコンとスマホで同じデータを使うには、上の「自動同期」を設定してください。
       </p>
+      <VersionInfo />
     </section>
+  );
+}
+
+/** アプリのバージョン表示と、最新版の確認 */
+function VersionInfo() {
+  const [state, setState] = useState<'idle' | 'checking' | 'latest' | 'updating' | 'error'>('idle');
+  const built = new Date(__BUILD_TIME__).toLocaleString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  const check = async () => {
+    setState('checking');
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
+      if (!reg) {
+        location.reload();
+        return;
+      }
+      await reg.update();
+      if (reg.installing || reg.waiting) {
+        // 新しい版が見つかったら、切り替わったところで読み込み直す
+        setState('updating');
+        navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), { once: true });
+        setTimeout(() => location.reload(), 8000);
+      } else {
+        setState('latest');
+      }
+    } catch {
+      setState('error');
+    }
+  };
+
+  return (
+    <div className="row version">
+      <small className="muted grow">バージョン：{built} 公開</small>
+      <button type="button" className="btn small" disabled={state === 'checking' || state === 'updating'} onClick={check}>
+        {state === 'checking' ? '確認中…' : state === 'updating' ? '更新しています…' : '最新版を確認'}
+      </button>
+      {state === 'latest' && <small className="plus">最新版です</small>}
+      {state === 'error' && <small className="error">確認できませんでした（インターネット接続を確認してください）</small>}
+    </div>
   );
 }
 
