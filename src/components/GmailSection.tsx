@@ -4,13 +4,15 @@ import { appUrl } from '../lib/install';
 import type { ExpenseGroup } from '../types';
 import { useStore } from '../store';
 import { DEFAULT_GMAIL_QUERY, authorize, fetchCardUsages, getProfileEmail, signOut, type MailUsage } from '../lib/gmail';
-import { fetchViaScript, gmailFromShareText, gmailShareUrl, isScriptUrl, itemsToAdd, newToken, scriptCode, usageToTransaction } from '../lib/gmailScript';
+import { duplicatesFromOrderMails, fetchViaScript, gmailFromShareText, gmailShareUrl, isScriptUrl, itemsToAdd, newToken, scriptCode, usageToTransaction } from '../lib/gmailScript';
+import type { Transaction } from '../types';
 import { GROUP_LABEL } from '../lib/categories';
 import { formatDate, today } from '../lib/date';
 import { yen } from '../lib/format';
 
 export function GmailSection() {
-  const { data, updateSettings, addTransactions, updateTransaction } = useStore();
+  const { data, updateSettings, addTransactions, updateTransaction, deleteTransaction } = useStore();
+  const [duplicates, setDuplicates] = useState<Transaction[]>([]);
   const g = data.settings.gmail;
   const setG = (patch: Partial<typeof g>) => updateSettings({ gmail: { ...g, ...patch } });
   const [busy, setBusy] = useState('');
@@ -43,9 +45,10 @@ export function GmailSection() {
   const readViaScript = (url = g.scriptUrl, connecting = false, token = g.scriptToken) =>
     run(async () => {
       setBusy('Gmail を読み取っています…（20秒ほどかかることがあります）');
-      const { email, usages } = await fetchViaScript(url, token, g.query);
+      const { email, usages, orderMessageIds } = await fetchViaScript(url, token, g.query);
       if (connecting) setG({ scriptUrl: url.trim(), scriptToken: token, email, autoSince: today() });
       for (const { id, patch } of itemsToAdd(data.transactions, usages)) updateTransaction(id, patch);
+      setDuplicates(duplicatesFromOrderMails(data.transactions, orderMessageIds));
       return usages;
     });
 
@@ -168,6 +171,35 @@ export function GmailSection() {
           <button type="button" className="link small" onClick={() => setG({ query: DEFAULT_GMAIL_QUERY })}>既定に戻す</button>
         </div>
       </details>
+
+      {duplicates.length > 0 && (
+        <div className="card alert">
+          <strong>⚠️ 注文確認メールから取り込まれた明細が{duplicates.length}件あります</strong>
+          <small>カードの支払いと二重に数えられている可能性があります。確認して削除してください。</small>
+          <ul className="money-rows">
+            {duplicates.map((t) => (
+              <li key={t.id}>
+                <span>{t.date.replace(/-/g, '/')} {t.memo}</span>
+                <span className="num">{yen(t.amount)}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="form-actions">
+            <span className="grow" />
+            <button type="button" className="btn" onClick={() => setDuplicates([])}>そのままにする</button>
+            <button
+              type="button"
+              className="btn danger"
+              onClick={() => {
+                duplicates.forEach((t) => deleteTransaction(t.id));
+                setDuplicates([]);
+              }}
+            >
+              {duplicates.length}件を削除
+            </button>
+          </div>
+        </div>
+      )}
 
       {busy && <p className="hint">{busy}</p>}
       {error && <p className="error">{error}</p>}

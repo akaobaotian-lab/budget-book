@@ -140,8 +140,9 @@ export function parseCardMail(body: string, from: string, subject: string, fallb
   }
   flush();
 
-  // ラベル形式で見つからない場合のフォールバック：「◯◯円」の最初の金額
-  if (results.length === 0) {
+  // ラベル形式で見つからない場合のフォールバック：「◯◯円」の最初の金額。
+  // お店のメールなどを誤って取り込まないよう、カード会社からのメールに限る
+  if (results.length === 0 && (card !== 'クレジットカード' || /カード|card/i.test(subject))) {
     const m = normalizeWidth(body).match(/([\d,]{2,})\s*円/);
     const amount = m ? Number(m[1].replace(/,/g, '')) : 0;
     if (amount > 0) {

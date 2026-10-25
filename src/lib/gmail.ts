@@ -1,5 +1,6 @@
 import { parseCardMail, type CardUsage } from './cardMailParser';
 import { toISODate } from './date';
+import { isOrderMail } from './orderMailParser';
 
 /**
  * Gmail API（読み取り専用）でカード利用通知メールを取得する。
@@ -196,7 +197,10 @@ export async function fetchCardUsages(
       const subject = header('subject');
       const from = header('from');
       const received = toISODate(new Date(Number(msg.internalDate)));
-      parseCardMail(extractBody(msg.payload), from, subject, received).forEach((u, idx) =>
+      const body = extractBody(msg.payload);
+      // 注文確認メールはカードの支払いと二重にならないよう明細にしない
+      if (isOrderMail(body, from, subject)) continue;
+      parseCardMail(body, from, subject, received).forEach((u, idx) =>
         out.push({ ...u, messageId: msg.id, key: `${msg.id}#${idx}`, subject }),
       );
     }

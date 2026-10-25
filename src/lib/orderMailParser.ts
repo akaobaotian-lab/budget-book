@@ -112,6 +112,17 @@ export function parseOrderMail(messageId: string, body: string, from: string, su
   return { messageId, date: received, total, items, shop: shopName(from, subject) };
 }
 
+/** ネットショップ（カード会社ではない）の送信元 */
+const SHOP_SENDER = /@(?:[\w-]+\.)*(?:amazon\.co\.jp|amazon\.com|rakuten\.co\.jp|shopping\.yahoo\.co\.jp|mail\.yahoo\.co\.jp|mercari\.jp|zozo\.jp|uber\.com|apple\.com|yodobashi\.com|biccamera\.com|uniqlo\.com|aeonnetshop\.com)>?\s*$/i;
+
+/**
+ * 注文確認メール（お店からのメール）か。
+ * これに当たるメールからはカードの利用明細を作らず、商品名を付けるためだけに使う（二重計上を防ぐ）。
+ */
+export function isOrderMail(body: string, from: string, subject: string): boolean {
+  return SHOP_SENDER.test(from.trim()) || parseOrderMail('', body, from, subject, '') !== null;
+}
+
 const DAY = 24 * 60 * 60 * 1000;
 const dayDiff = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) / DAY;
 

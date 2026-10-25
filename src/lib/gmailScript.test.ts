@@ -155,3 +155,41 @@ describe('ご利用内容', () => {
     expect(itemsToAdd([{ ...old, detail: '手で変更' }], [u])).toEqual([]);
   });
 });
+
+import { duplicatesFromOrderMails } from './gmailScript';
+import { parseCardMail } from './cardMailParser';
+
+describe('no double counting with order mails', () => {
+  const cardMail: ScriptMessage = {
+    id: 'card1', date: Date.parse('2026-10-21'), from: 'info@mail.rakuten-card.co.jp', subject: 'カード利用のお知らせ',
+    body: '■利用日: 2026/10/21\n■利用先: AMAZON.CO.JP\n■ご利用内容: 買物\n■利用金額: 1,980 円',
+  };
+  // カード通知の検索に引っかかるお店のメール（件名に「ご利用」「決済」）
+  const shopMail: ScriptMessage = {
+    id: 'shop1', date: Date.parse('2026-10-20'), from: '"Amazon.co.jp" <auto-confirm@amazon.co.jp>', subject: 'Amazon Payのご利用・決済完了',
+    body: 'ご注文ありがとうございます\nボックスティッシュ 5箱パック\n数量: 1\n1,980 円\nお支払い金額 1,980 円',
+  };
+  // 商品名は読めないがお店からの決済メール
+  const shopReceipt: ScriptMessage = {
+    id: 'shop2', date: Date.parse('2026-10-20'), from: 'Uber Receipts <noreply@uber.com>', subject: 'ご利用ありがとうございます',
+    body: '合計 ¥2,300\nお支払い方法 Visa ****1234',
+  };
+
+  it('creates exactly one entry: from the card mail, with the items from the shop mail', () => {
+    const usages = attachItems(usagesFromMessages([cardMail, shopMail, shopReceipt]), ordersFromMessages([cardMail, shopMail, shopReceipt]));
+    expect(usages).toHaveLength(1);
+    expect(usages[0]).toMatchObject({ messageId: 'card1', amount: 1980, detail: '買物', items: ['ボックスティッシュ 5箱パック'] });
+  });
+
+  it('does not use the amount fallback for non-card senders', () => {
+    expect(parseCardMail('ご利用ありがとうございました。合計 2,300円', 'Some Shop <info@shop.example>', 'ご利用ありがとうございます', '2026-10-20')).toEqual([]);
+    // カード会社のメールならフォールバックで読む
+    expect(parseCardMail('今回のご利用は 2,300円 です', 'info@mail.rakuten-card.co.jp', 'ご利用速報', '2026-10-20')).toHaveLength(1);
+  });
+
+  it('finds entries an older version created from order mails', () => {
+    const base = { date: '2026-10-20', kind: 'expense' as const, amount: 1980, memo: 'x', source: 'gmail' as const, createdAt: 0 };
+    const txs: Transaction[] = [{ ...base, id: 'a', gmailId: 'shop1#0' }, { ...base, id: 'b', gmailId: 'card1#0' }, { ...base, id: 'c' }];
+    expect(duplicatesFromOrderMails(txs, ['shop1', 'shop2']).map((t) => t.id)).toEqual(['a']);
+  });
+});

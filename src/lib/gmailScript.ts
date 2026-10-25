@@ -3,7 +3,7 @@ import { defaultGroupFor, guessCategory } from './categories';
 import { toISODate } from './date';
 import { DEFAULT_GMAIL_QUERY, type MailUsage } from './gmail';
 import type { ExpenseGroup, Transaction } from '../types';
-import { ORDER_QUERY, matchOrders, parseOrderMail, type OrderMail } from './orderMailParser';
+import { ORDER_QUERY, isOrderMail, matchOrders, parseOrderMail, type OrderMail } from './orderMailParser';
 import type { NewTransaction } from '../store';
 
 /**
@@ -75,6 +75,8 @@ export function isScriptUrl(url: string): boolean {
 export function usagesFromMessages(messages: ScriptMessage[]): MailUsage[] {
   const out: MailUsage[] = [];
   for (const m of messages) {
+    // 注文確認メールはカードの支払いと二重にならないよう明細にしない
+    if (isOrderMail(m.body, m.from, m.subject)) continue;
     const received = toISODate(new Date(m.date));
     parseCardMail(m.body, m.from, m.subject, received).forEach((u, idx) =>
       out.push({ ...u, messageId: m.id, key: `${m.id}#${idx}`, subject: m.subject }),
@@ -100,16 +102,30 @@ export function attachItems(usages: MailUsage[], orders: OrderMail[]): MailUsage
  * カードの利用通知を読み取り、注文確認メールがあれば買った商品名も付ける。
  * 注文メールの読み取りに失敗しても、カードの利用は返す。
  */
-export async function fetchViaScript(url: string, token: string, query: string): Promise<{ email: string; usages: MailUsage[] }> {
+export async function fetchViaScript(
+  url: string,
+  token: string,
+  query: string,
+): Promise<{ email: string; usages: MailUsage[]; orderMessageIds: string[] }> {
   const { email, messages } = await fetchScriptMessages(url, token, query || DEFAULT_GMAIL_QUERY);
   const usages = usagesFromMessages(messages);
-  let orders: OrderMail[] = [];
+  // カード通知の検索に注文メールが混ざっていた場合も、商品名の情報として使う
+  let orders: OrderMail[] = ordersFromMessages(messages);
   try {
-    orders = ordersFromMessages((await fetchScriptMessages(url, token, ORDER_QUERY)).messages);
+    const more = ordersFromMessages((await fetchScriptMessages(url, token, ORDER_QUERY)).messages);
+    const seen = new Set(orders.map((o) => o.messageId));
+    orders = [...orders, ...more.filter((o) => !seen.has(o.messageId))];
   } catch {
     // 商品名は補助的な情報なので、取れなくても続ける
   }
-  return { email, usages: attachItems(usages, orders) };
+  const orderMessageIds = messages.filter((m) => isOrderMail(m.body, m.from, m.subject)).map((m) => m.id);
+  return { email, usages: attachItems(usages, orders), orderMessageIds };
+}
+
+/** 以前の版で注文メールから作られてしまった明細（カードの支払いと二重になっているもの） */
+export function duplicatesFromOrderMails(transactions: Transaction[], orderMessageIds: string[]): Transaction[] {
+  const ids = new Set(orderMessageIds);
+  return transactions.filter((t) => t.gmailId && ids.has(t.gmailId.split('#')[0]));
 }
 
 async function fetchScriptMessages(url: string, token: string, query: string): Promise<{ email: string; messages: ScriptMessage[] }> {
