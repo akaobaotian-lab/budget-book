@@ -43,33 +43,21 @@ function Stat({ label, value, color, sub }: { label: string; value: string; colo
 
 /* ---------------- ホーム ---------------- */
 
-/** 0円の項目を除いた内訳の文 */
-function breakdown(items: [string, number][]): string {
-  const parts = items.filter(([, v]) => v > 0).map(([k, v]) => `${k} ${yen(v)}`);
-  return parts.length ? parts.join(' ＋ ') : 'なし';
-}
-
-/** 入ってきたお金 − 出ていったお金 ＝ 収支 を、内訳つきで表示 */
-function MoneyFlow({ s }: { s: ReturnType<typeof summarizeMonth> }) {
+/** 収入・出費のカード（合計と内訳） */
+function MoneyCard({ title, tone, total, rows }: { title: string; tone: 'in' | 'out'; total: number; rows: [string, number, string?][] }) {
   return (
-    <div className="flow">
-      <div className="flow-row">
-        <span>入ってきたお金</span>
-        <strong className="plus">{yen(s.totalIn)}</strong>
-      </div>
-      <small className="muted">{breakdown([['収入', s.income], ['返してもらった', s.repay], ['競馬の払戻', s.keibaPayout]])}</small>
-      <div className="flow-row">
-        <span>出ていったお金</span>
-        <strong className="minus">−{yen(s.totalOut)}</strong>
-      </div>
-      <small className="muted">
-        {breakdown([['自分', s.personal], ['生活費', s.living], ['貸した', s.lend], ['競馬の購入', s.keibaPurchase]])}
-      </small>
-      <div className="flow-row total">
-        <span>収支（入 − 出）</span>
-        <strong className={s.balance >= 0 ? 'plus' : 'minus'}>{s.balance > 0 ? '+' : s.balance < 0 ? '−' : ''}{yen(Math.abs(s.balance))}</strong>
-      </div>
-    </div>
+    <section className={`card money ${tone}`}>
+      <h3>{title}</h3>
+      <strong className="money-total">{yen(total)}</strong>
+      <ul className="money-rows">
+        {rows.map(([label, value, color]) => (
+          <li key={label} className={value === 0 ? 'zero' : ''}>
+            <span>{color && <i className="swatch" style={{ background: color }} />}{label}</span>
+            <span className="num">{yen(value)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -81,20 +69,42 @@ export function HomePage({ month, onEdit, onAdd, go }: PageProps) {
   const year = Number(month.slice(0, 4));
   const tax = useMemo(() => estimateTax(txs, year, data.settings.tax), [txs, year, data.settings.tax]);
   const recent = useMemo(() => sortByDateDesc(inMonth(txs, month)).slice(0, 8), [txs, month]);
+  const incomeBy = useMemo(() => {
+    const by = { salary: 0, side: 0, other: 0 };
+    for (const t of inMonth(txs, month)) if (t.kind === 'income') by[t.incomeType ?? 'other'] += t.amount;
+    return by;
+  }, [txs, month]);
 
   return (
     <div className="page">
-      <section className="card hero">
-        <span className="muted">{formatMonth(month)}の支出総額</span>
-        <strong className="hero-num">{yen(s.totalOut)}</strong>
-        <MoneyFlow s={s} />
-        <div className="stats">
-          <Stat label="自分の買い物" value={yen(s.personal)} color={COLORS.personal} />
-          <Stat label="生活費" value={yen(s.living)} color={COLORS.living} />
-          <Stat label="貸したお金" value={yen(s.lend)} color={COLORS.lend} sub={s.repay ? `返済 ${yen(s.repay)}` : undefined} />
-          <Stat label="競馬（購入）" value={yen(s.keibaPurchase)} color={COLORS.keiba} sub={s.keibaPurchase || s.keibaPayout ? `収支 ${signedYen(s.keibaPayout - s.keibaPurchase)}` : undefined} />
-        </div>
-      </section>
+      <div className="money-pair">
+        <MoneyCard
+          title={`${formatMonth(month)}の収入`}
+          tone="in"
+          total={s.totalIn}
+          rows={[
+            ['給与', incomeBy.salary],
+            ['副業', incomeBy.side],
+            ['その他の収入', incomeBy.other],
+            ['返してもらったお金', s.repay],
+            ['競馬の払戻', s.keibaPayout],
+          ]}
+        />
+        <MoneyCard
+          title={`${formatMonth(month)}の出費`}
+          tone="out"
+          total={s.totalOut}
+          rows={[
+            ['自分の買い物', s.personal, COLORS.personal],
+            ['生活費', s.living, COLORS.living],
+            ['貸したお金', s.lend, COLORS.lend],
+            ['競馬の購入', s.keibaPurchase, COLORS.keiba],
+          ]}
+        />
+      </div>
+      <p className={`balance-line ${s.balance >= 0 ? 'plus' : 'minus'}`}>
+        収支（収入 − 出費）<strong>{s.balance > 0 ? '+' : s.balance < 0 ? '−' : ''}{yen(Math.abs(s.balance))}</strong>
+      </p>
 
       {tax.taxOccurred && (
         <button type="button" className={`card alert ${tax.filingExempt ? 'soft' : ''}`} onClick={() => go('tax')}>
@@ -127,7 +137,7 @@ export function HomePage({ month, onEdit, onAdd, go }: PageProps) {
       </div>
 
       <section className="card">
-        <h3>日別の支出</h3>
+        <h3>日別の出費</h3>
         <BarChart
           stacked
           labels={daily.map((d) => String(d.day))}

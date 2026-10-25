@@ -350,3 +350,21 @@ ol.steps .btn { margin-bottom: 4px; }
 .flow-row strong { font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .flow-row.total { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; font-weight: 700; }
 .flow-row.total strong { font-size: 20px; }
+
+/* ホームの収入・出費 */
+.money-pair { display: grid; gap: 14px; }
+@media (min-width: 640px) { .money-pair { grid-template-columns: 1fr 1fr; } }
+.money h3 { margin: 0 0 2px; font-size: 14px; color: var(--muted); font-weight: 600; }
+.money-total { display: block; font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.money.in { border-top: 4px solid var(--plus); }
+.money.in .money-total { color: var(--plus); }
+.money.out { border-top: 4px solid var(--minus); }
+.money.out .money-total { color: var(--minus); }
+.money-rows { list-style: none; margin: 10px 0 0; padding: 0; font-size: 14px; }
+.money-rows li { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-top: 1px dashed var(--line); }
+.money-rows li span:first-child { display: flex; align-items: center; gap: 6px; }
+.money-rows li.zero { color: var(--muted); }
+.balance-line { margin: -4px 4px 0; display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: var(--muted); }
+.balance-line strong { font-size: 18px; }
+.balance-line.plus strong { color: var(--plus); }
+.balance-line.minus strong { color: var(--minus); }
