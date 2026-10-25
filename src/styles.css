@@ -311,3 +311,21 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; font-si
 .qr img { border-radius: 8px; background: #fff; flex: none; }
 .qr > div { flex: 1 1 200px; min-width: 0; }
 .qr p { margin: 4px 0; }
+
+/* 同期 */
+textarea {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--card); color: var(--text); font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical;
+}
+textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+pre.code { white-space: pre; overflow-x: auto; font-size: 11px; background: var(--bg); padding: 8px; border-radius: 8px; margin: 6px 0; user-select: all; }
+.sync-badge {
+  display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: var(--card);
+  border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; white-space: nowrap;
+}
+.sync-badge.ok { color: var(--plus); }
+.sync-badge.warn { color: #b7791f; border-color: var(--warn-line); }
+.sync-badge.error { color: var(--minus); border-color: var(--minus); }
+.sync-badge.muted { color: var(--muted); }
+.danger-link { color: var(--minus); margin-top: 8px; }
+.form-actions .link { white-space: nowrap; }

@@ -3,6 +3,7 @@ import type { AppData, Recurring, Settings, Transaction } from './types';
 import { generateRecurring } from './lib/recurring';
 import { DEFAULT_GMAIL_QUERY } from './lib/gmail';
 import { uid } from './lib/format';
+import { useSync, type SyncApi } from './lib/sync/useSync';
 
 const STORAGE_KEY = 'budget-book-v1';
 
@@ -41,8 +42,13 @@ function load(): AppData {
 function applyRecurring(data: AppData): AppData {
   const { transactions, recurring } = generateRecurring(data.recurring);
   if (transactions.length === 0 && recurring.every((r, i) => r === data.recurring[i])) return data;
-  return { ...data, transactions: [...data.transactions, ...transactions], recurring };
+  // 他の端末がすでに記入した月は追加しない
+  const existing = new Set(data.transactions.map((t) => t.id));
+  return { ...data, transactions: [...data.transactions, ...transactions.filter((t) => !existing.has(t.id))], recurring };
 }
+
+/** クラウドから受け取ったデータの整形と固定費の自動記入 */
+const fromRemote = (d: AppData) => applyRecurring(normalizeData(d));
 
 export type NewTransaction = Omit<Transaction, 'id' | 'createdAt'>;
 
@@ -55,12 +61,14 @@ interface Store {
   deleteRecurring(id: string): void;
   updateSettings(patch: Partial<Settings>): void;
   replaceAll(data: AppData): void;
+  sync: SyncApi;
 }
 
 const Ctx = createContext<Store | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData>(() => applyRecurring(load()));
+  const sync = useSync(data, setData, fromRemote);
 
   useEffect(() => {
     try {
@@ -116,8 +124,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const replaceAll = useCallback((next: AppData) => setData(applyRecurring(normalizeData(next))), []);
 
   const value = useMemo(
-    () => ({ data, addTransactions, updateTransaction, deleteTransaction, saveRecurring, deleteRecurring, updateSettings, replaceAll }),
-    [data, addTransactions, updateTransaction, deleteTransaction, saveRecurring, deleteRecurring, updateSettings, replaceAll],
+    () => ({ data, addTransactions, updateTransaction, deleteTransaction, saveRecurring, deleteRecurring, updateSettings, replaceAll, sync }),
+    [data, addTransactions, updateTransaction, deleteTransaction, saveRecurring, deleteRecurring, updateSettings, replaceAll, sync],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

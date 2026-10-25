@@ -1,6 +1,5 @@
 import type { Recurring, Transaction } from '../types';
 import { addMonths, dateInMonth, monthOf, today as todayFn } from './date';
-import { uid } from './format';
 
 /**
  * 有効な固定費について、未記入の月の明細を作成する。
@@ -22,13 +21,14 @@ export function generateRecurring(
       const date = dateInMonth(month, r.day);
       if (date > today) break;
       created.push({
-        id: uid(),
+        // 複数の端末が同じ月を記入しても重複しないよう、固定費と月から決まるIDにする
+        id: `rec-${r.id}-${month}`,
         date,
         kind: r.kind,
         amount: r.amount,
         memo: r.name,
         source: 'recurring',
-        createdAt: Date.now(),
+        createdAt: new Date(`${date}T00:00:00`).getTime(),
         recurringId: r.id,
         ...(r.kind === 'expense'
           ? { group: r.group ?? 'living', category: r.category ?? 'その他' }

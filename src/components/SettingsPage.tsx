@@ -6,10 +6,12 @@ import { GROUP_LABEL, defaultGroupFor, guessCategory } from '../lib/categories';
 import { formatDate, today } from '../lib/date';
 import { yen } from '../lib/format';
 import { InstallSection } from './InstallSection';
+import { SyncSection } from './SyncSection';
 
 export function SettingsPage() {
   return (
     <div className="page">
+      <SyncSection />
       <InstallSection />
       <GmailSection />
       <BackupSection />

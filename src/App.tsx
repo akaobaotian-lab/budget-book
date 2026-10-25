@@ -7,6 +7,10 @@ import { TaxPage } from './components/TaxPage';
 import { RecurringPage } from './components/RecurringPage';
 import { SettingsPage } from './components/SettingsPage';
 import { InstallButton } from './components/InstallSection';
+import { SyncBadge } from './components/SyncSection';
+
+// 他の端末の「接続」QRコードから開かれた場合は、ログインのため設定画面を表示する
+const openedForSync = location.hash.includes('sync=');
 
 const TABS: [Tab, string, string][] = [
   ['home', '🏠', 'ホーム'],
@@ -33,7 +37,7 @@ function initialEntry(): Entry {
 }
 
 export function App() {
-  const [tab, setTab] = useState<Tab>('home');
+  const [tab, setTab] = useState<Tab>(openedForSync ? 'settings' : 'home');
   const [month, setMonth] = useState(currentMonth());
   const [entry, setEntry] = useState<Entry>(initialEntry);
 
@@ -51,6 +55,7 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <h1>家計簿</h1>
+        <SyncBadge onClick={() => props.go('settings')} />
         <InstallButton onHelp={() => props.go('settings')} />
         {MONTHLY_TABS.includes(tab) && <MonthPicker month={month} setMonth={setMonth} />}
       </header>
