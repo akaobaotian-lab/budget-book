@@ -6,6 +6,8 @@ export interface CardUsage {
   amount: number;
   merchant: string;
   card: string;
+  /** ご利用内容（「買物」「ショッピング」など） */
+  detail?: string;
 }
 
 /** 送信元・件名からカード会社を推定 */
@@ -41,7 +43,8 @@ function labelled(labels: string): RegExp {
 
 const DATE_LABEL = labelled('ご?利用日時?|利用年月日|ご利用年月日|ご利用日時|お取引日|取引日時?|決済日時?|承認日時?');
 const AMOUNT_LABEL = labelled('ご?利用金額|お支払い?金額|決済金額|取引金額|ご請求金額|利用額|承認金額|金額');
-const MERCHANT_LABEL = labelled('ご?利用先|ご?利用店舗?名?|ご?利用場所|加盟店名?|店舗名?|ご?購入先|ご?利用内容');
+const MERCHANT_LABEL = labelled('ご?利用先|ご?利用店舗?名?|ご?利用場所|加盟店名?|店舗名?|ご?購入先');
+const DETAIL_LABEL = labelled('ご?利用内容|ご?利用取引|取引内容|ご?利用区分|ご?利用種別|取引区分');
 
 function parseDateValue(v: string): string | null {
   const s = v.replace(/\s/g, '');
@@ -90,6 +93,7 @@ export function parseCardMail(body: string, from: string, subject: string, fallb
         amount: cur.amount,
         merchant: cur.merchant || card,
         card,
+        ...(cur.detail ? { detail: cur.detail } : {}),
       });
     }
     cur = {};
@@ -122,6 +126,11 @@ export function parseCardMail(body: string, from: string, subject: string, fallb
         cur.amount = a;
         continue;
       }
+    }
+    const dt = valueOf(line.match(DETAIL_LABEL));
+    if (dt && !cur.detail && !/[¥]?[\d,]+円/.test(dt)) {
+      cur.detail = cleanMerchant(dt).slice(0, 30);
+      continue;
     }
     const mm = valueOf(line.match(MERCHANT_LABEL));
     if (mm && !cur.merchant && !/[¥]?[\d,]+円/.test(mm)) {

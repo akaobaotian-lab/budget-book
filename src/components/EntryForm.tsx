@@ -27,6 +27,10 @@ interface FormState {
   group: ExpenseGroup;
   category: string;
   sideExpense: boolean;
+  /** 買った商品（1行に1つ） */
+  items: string;
+  /** ご利用内容（買物など） */
+  detail: string;
   incomeType: IncomeType;
   person: string;
   payout: string;
@@ -43,6 +47,8 @@ function fromTx(t: Transaction): FormState {
     group: t.group ?? 'personal',
     category: t.category ?? 'その他',
     sideExpense: !!t.sideExpense,
+    items: (t.items ?? []).join('\n'),
+    detail: t.detail ?? '',
     incomeType: t.incomeType ?? 'side',
     person: t.person ?? '',
     payout: t.payout ? String(t.payout) : '',
@@ -52,7 +58,7 @@ function fromTx(t: Transaction): FormState {
 }
 
 const blank = (kind: Kind): FormState => ({
-  kind, date: today(), amount: '', memo: '', group: 'personal', category: '食費', sideExpense: false,
+  kind, date: today(), amount: '', memo: '', group: 'personal', category: '食費', sideExpense: false, items: '', detail: '',
   incomeType: 'side', person: '', payout: '', hitCost: '', source: 'manual',
 });
 
@@ -147,7 +153,10 @@ export function EntryForm({ editing, initialKind = 'expense', initialMode = 'man
     if ((f.kind === 'lend' || f.kind === 'repay') && !f.person.trim()) return setError('相手の名前を入力してください');
 
     const tx: NewTransaction = { kind: f.kind, date: f.date, amount, memo: f.memo.trim(), source: f.source };
-    if (f.kind === 'expense') Object.assign(tx, { group: f.group, category: f.category, sideExpense: f.sideExpense || undefined });
+    if (f.kind === 'expense') {
+      const items = f.items.split('\n').map((x) => x.trim()).filter(Boolean);
+      Object.assign(tx, { group: f.group, category: f.category, sideExpense: f.sideExpense || undefined, items: items.length ? items : undefined, detail: f.detail.trim() || undefined });
+    }
     if (f.kind === 'income') tx.incomeType = f.incomeType;
     if (f.kind === 'lend' || f.kind === 'repay') tx.person = f.person.trim();
     if (f.kind === 'keiba') {
@@ -158,7 +167,7 @@ export function EntryForm({ editing, initialKind = 'expense', initialMode = 'man
     if (editing) {
       // 種類が変わった場合に古い項目が残らないようにする
       updateTransaction(editing.id, {
-        group: undefined, category: undefined, sideExpense: undefined, incomeType: undefined,
+        group: undefined, category: undefined, sideExpense: undefined, items: undefined, detail: undefined, incomeType: undefined,
         person: undefined, payout: undefined, hitCost: undefined, ...tx,
       });
     } else {
@@ -287,6 +296,20 @@ export function EntryForm({ editing, initialKind = 'expense', initialMode = 'man
               {f.kind === 'keiba' ? 'レース・メモ' : 'メモ・店名'}
               <input value={f.memo} onChange={(e) => onMemo(e.target.value)} placeholder={f.kind === 'keiba' ? '例: 東京11R 天皇賞' : '例: スーパー'} />
             </label>
+
+            {f.kind === 'expense' && (f.detail || f.source === 'gmail') && (
+              <label>
+                ご利用内容
+                <input value={f.detail} onChange={(e) => set('detail', e.target.value)} placeholder="例: 買物" />
+              </label>
+            )}
+
+            {f.kind === 'expense' && (
+              <label>
+                買った商品 <small>（任意・1行に1つ）</small>
+                <textarea rows={Math.min(6, Math.max(2, f.items.split('\n').length))} value={f.items} onChange={(e) => set('items', e.target.value)} placeholder={'例: ティッシュ 5箱\nしょうゆ'} />
+              </label>
+            )}
 
             {error && <p className="error">{error}</p>}
 

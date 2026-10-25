@@ -187,7 +187,7 @@ export function ListPage({ month, onEdit }: PageProps) {
     });
     if (q.trim()) {
       const k = q.trim().toLowerCase();
-      list = list.filter((t) => [t.memo, t.category, t.person].some((v) => v?.toLowerCase().includes(k)));
+      list = list.filter((t) => [t.memo, t.category, t.person, ...(t.items ?? [])].some((v) => v?.toLowerCase().includes(k)));
     }
     const sorted = sortByDateDesc(list);
     return asc ? sorted.reverse() : sorted;

@@ -25,6 +25,10 @@ export interface Transaction {
   category?: string;
   /** 副業の経費として計上する */
   sideExpense?: boolean;
+  /** カード利用通知の「ご利用内容」（買物など） */
+  detail?: string;
+  /** 買った商品（注文確認メールから取り込み、または手入力） */
+  items?: string[];
 
   /** kind = income */
   incomeType?: IncomeType;

@@ -75,7 +75,10 @@ export function TxList({ items, onEdit, groupByDate = true }: { items: Transacti
                   <span className={`dot kind-${t.kind} ${t.kind === 'expense' ? `group-${t.group}` : ''}`} />
                   <span className="tx-main">
                     <span className="tx-title">{txTitle(t)} {SOURCE_ICON[t.source] && <small>{SOURCE_ICON[t.source]}</small>}</span>
-                    <small className="muted">{!groupByDate && `${formatDate(t.date)} ・ `}{tag(t)}</small>
+                    {t.items?.length ? (
+                      <small className="tx-items">🛒 {t.items[0]}{t.items.length > 1 ? ` ほか${t.items.length - 1}点` : ''}</small>
+                    ) : null}
+                    <small className="muted">{!groupByDate && `${formatDate(t.date)} ・ `}{tag(t)}{t.detail ? ` ・ ${t.detail}` : ''}</small>
                   </span>
                   <TxAmount t={t} />
                 </button>

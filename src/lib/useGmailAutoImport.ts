@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
-import { fetchViaScript, gmailFromShareText, usageToTransaction } from './gmailScript';
+import { fetchViaScript, gmailFromShareText, itemsToAdd, usageToTransaction } from './gmailScript';
 import { today } from './date';
 import type { MailUsage } from './gmail';
 
@@ -18,7 +18,7 @@ export function pickAutoImport(usages: MailUsage[], imported: Set<string>, since
  * 取り込んだ件数のお知らせを返す。
  */
 export function useGmailAutoImport(): [string, () => void] {
-  const { data, addTransactions, updateSettings } = useStore();
+  const { data, addTransactions, updateSettings, updateTransaction } = useStore();
   const [message, setMessage] = useState('');
 
   // 他の端末の「スマホでも自動取り込み」のリンク・QRコードから開かれた場合は設定を受け取る
@@ -56,6 +56,8 @@ export function useGmailAutoImport(): [string, () => void] {
         }
         const imported = new Set(latest.current.transactions.map((t) => t.gmailId).filter((x): x is string => !!x));
         const fresh = pickAutoImport(usages, imported, g.autoSince);
+        // 前に取り込んだ明細にも、あとから届いた注文メールの商品名を付ける
+        for (const { id, patch } of itemsToAdd(latest.current.transactions, usages)) updateTransaction(id, patch);
         if (fresh.length) {
           addTransactions(fresh.map((u) => usageToTransaction(u, 'auto')));
           setMessage(`✉️ Gmailからカードの利用を${fresh.length}件取り込みました`);
@@ -69,7 +71,7 @@ export function useGmailAutoImport(): [string, () => void] {
     check();
     document.addEventListener('visibilitychange', check);
     return () => document.removeEventListener('visibilitychange', check);
-  }, [addTransactions]);
+  }, [addTransactions, updateTransaction]);
 
   return [message, () => setMessage('')];
 }

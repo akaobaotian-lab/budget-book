@@ -2,7 +2,8 @@ import { parseCardMail } from './cardMailParser';
 import { defaultGroupFor, guessCategory } from './categories';
 import { toISODate } from './date';
 import { DEFAULT_GMAIL_QUERY, type MailUsage } from './gmail';
-import type { ExpenseGroup } from '../types';
+import type { ExpenseGroup, Transaction } from '../types';
+import { ORDER_QUERY, matchOrders, parseOrderMail, type OrderMail } from './orderMailParser';
 import type { NewTransaction } from '../store';
 
 /**
@@ -82,9 +83,38 @@ export function usagesFromMessages(messages: ScriptMessage[]): MailUsage[] {
   return out.sort((a, b) => b.date.localeCompare(a.date));
 }
 
+/** 注文確認メールから注文内容を取り出す */
+export function ordersFromMessages(messages: ScriptMessage[]): OrderMail[] {
+  return messages
+    .map((m) => parseOrderMail(m.id, m.body, m.from, m.subject, toISODate(new Date(m.date))))
+    .filter((o): o is OrderMail => !!o);
+}
+
+/** カード利用に、金額と日付が合う注文メールの商品名を付ける */
+export function attachItems(usages: MailUsage[], orders: OrderMail[]): MailUsage[] {
+  const matched = matchOrders(usages, orders);
+  return usages.map((u) => (matched.has(u.key) ? { ...u, items: matched.get(u.key)!.items } : u));
+}
+
+/**
+ * カードの利用通知を読み取り、注文確認メールがあれば買った商品名も付ける。
+ * 注文メールの読み取りに失敗しても、カードの利用は返す。
+ */
 export async function fetchViaScript(url: string, token: string, query: string): Promise<{ email: string; usages: MailUsage[] }> {
+  const { email, messages } = await fetchScriptMessages(url, token, query || DEFAULT_GMAIL_QUERY);
+  const usages = usagesFromMessages(messages);
+  let orders: OrderMail[] = [];
+  try {
+    orders = ordersFromMessages((await fetchScriptMessages(url, token, ORDER_QUERY)).messages);
+  } catch {
+    // 商品名は補助的な情報なので、取れなくても続ける
+  }
+  return { email, usages: attachItems(usages, orders) };
+}
+
+async function fetchScriptMessages(url: string, token: string, query: string): Promise<{ email: string; messages: ScriptMessage[] }> {
   if (!isScriptUrl(url)) throw new Error('URL が正しくありません。「https://script.google.com/macros/s/…/exec」の形のURLを貼り付けてください');
-  const q = new URLSearchParams({ token, q: query || DEFAULT_GMAIL_QUERY });
+  const q = new URLSearchParams({ token, q: query });
   let res: Response;
   try {
     res = await fetch(`${url.trim()}?${q}`);
@@ -101,7 +131,7 @@ export async function fetchViaScript(url: string, token: string, query: string):
   }
   if (body.error === 'unauthorized') throw new Error('合言葉が一致しません。アプリに表示されているスクリプトを貼り付け直して、新しいバージョンをデプロイしてください');
   if (body.error) throw new Error(body.error);
-  return { email: body.email ?? '', usages: usagesFromMessages(body.messages ?? []) };
+  return { email: body.email ?? '', messages: body.messages ?? [] };
 }
 
 /** 取り込み済みの判定と、明細への変換 */
@@ -111,7 +141,9 @@ export function gmailTxId(key: string): string {
 }
 
 export function usageToTransaction(u: MailUsage, group: ExpenseGroup | 'auto'): NewTransaction {
-  const category = guessCategory(u.merchant);
+  // 商品名からカテゴリが分かればそれを使う（Amazon などは店名だけでは分からない）
+  const fromItems = u.items?.length ? guessCategory(u.items.join(' ')) : 'その他';
+  const category = fromItems !== 'その他' ? fromItems : guessCategory(u.merchant);
   return {
     id: gmailTxId(u.key),
     kind: 'expense',
@@ -122,7 +154,27 @@ export function usageToTransaction(u: MailUsage, group: ExpenseGroup | 'auto'): 
     group: group === 'auto' ? defaultGroupFor(category) : group,
     source: 'gmail',
     gmailId: u.key,
+    items: u.items,
+    detail: u.detail,
   };
+}
+
+/**
+ * 取り込み済みの明細に、まだ入っていない「ご利用内容」と商品名を後から付ける
+ * （手で直したカテゴリや店名などは変えない）
+ */
+export function itemsToAdd(transactions: Transaction[], usages: MailUsage[]): { id: string; patch: Pick<Transaction, 'items' | 'detail'> }[] {
+  const byKey = new Map(usages.map((u) => [u.key, u]));
+  const out: { id: string; patch: Pick<Transaction, 'items' | 'detail'> }[] = [];
+  for (const t of transactions) {
+    const u = t.gmailId ? byKey.get(t.gmailId) : undefined;
+    if (!u) continue;
+    const patch: Pick<Transaction, 'items' | 'detail'> = {};
+    if (!t.items?.length && u.items?.length) patch.items = u.items;
+    if (!t.detail && u.detail) patch.detail = u.detail;
+    if (patch.items || patch.detail) out.push({ id: t.id, patch });
+  }
+  return out;
 }
 
 /** 他の端末に Gmail 取り込みの設定（URLと合言葉）を渡すリンク。#以降はサーバーに送信されない */

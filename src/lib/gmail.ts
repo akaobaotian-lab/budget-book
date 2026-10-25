@@ -161,6 +161,8 @@ function extractBody(part: Part): string {
 
 export interface MailUsage extends CardUsage {
   messageId: string;
+  /** 注文確認メールから見つけた商品名 */
+  items?: string[];
   /** 1通に複数件ある場合の連番 */
   key: string;
   subject: string;

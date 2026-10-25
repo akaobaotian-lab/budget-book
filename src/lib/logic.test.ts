@@ -99,7 +99,16 @@ describe('parseCardMail', () => {
 ご利用取引：買物
 ご利用金額：650円`;
     expect(parseCardMail(body, 'statement@vpass.ne.jp', 'ご利用のお知らせ', '2026-10-18')).toEqual([
-      { date: '2026-10-18', amount: 650, merchant: 'スターバックス', card: '三井住友カード' },
+      { date: '2026-10-18', amount: 650, merchant: 'スターバックス', card: '三井住友カード', detail: '買物' },
+    ]);
+  });
+  it('reads ご利用内容 even before the merchant line', () => {
+    const body = `ご利用日：2026/10/19
+ご利用内容：買物
+ご利用先：セブン－イレブン
+ご利用金額：420円`;
+    expect(parseCardMail(body, 'info@example-card.jp', 'ご利用のお知らせ', '2026-10-19')).toEqual([
+      { date: '2026-10-19', amount: 420, merchant: 'セブン－イレブン', card: 'クレジットカード', detail: '買物' },
     ]);
   });
   it('JCB style with value on next line', () => {

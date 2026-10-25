@@ -112,3 +112,46 @@ describe('gmail share link', () => {
     expect(gmailFromShareText(`#gmail=${evil}`)).toBeNull();
   });
 });
+
+import { attachItems, itemsToAdd, ordersFromMessages } from './gmailScript';
+import type { Transaction } from '../types';
+
+describe('items from order mails', () => {
+  const card: ScriptMessage = {
+    id: 'c1', date: Date.parse('2026-10-21T10:00:00+09:00'), from: 'info@mail.rakuten-card.co.jp', subject: 'カード利用のお知らせ',
+    body: '■利用日: 2026/10/21\n■利用先: AMAZON.CO.JP\n■利用金額: 1,980 円',
+  };
+  const order: ScriptMessage = {
+    id: 'o1', date: Date.parse('2026-10-20T09:00:00+09:00'), from: '"Amazon.co.jp" <auto-confirm@amazon.co.jp>', subject: '注文済み',
+    body: 'ご注文ありがとうございます\nボックスティッシュ 5箱パック\n数量: 1\n1,980 円\n合計 1,980 円',
+  };
+
+  it('attaches items and picks the category from them', () => {
+    const [u] = attachItems(usagesFromMessages([card]), ordersFromMessages([order]));
+    expect(u.items).toEqual(['ボックスティッシュ 5箱パック']);
+    const t = usageToTransaction(u, 'auto');
+    expect(t).toMatchObject({ memo: 'AMAZON.CO.JP', items: ['ボックスティッシュ 5箱パック'], category: '日用品', group: 'living' });
+  });
+
+  it('fills items into previously imported transactions only', () => {
+    const [u] = attachItems(usagesFromMessages([card]), ordersFromMessages([order]));
+    const base = { date: '2026-10-21', kind: 'expense' as const, amount: 1980, memo: 'AMAZON', source: 'gmail' as const, createdAt: 0 };
+    const txs: Transaction[] = [
+      { ...base, id: 'a', gmailId: u.key },
+      { ...base, id: 'b', gmailId: u.key, items: ['手で入れた商品'] },
+      { ...base, id: 'c', gmailId: 'other#0' },
+    ];
+    expect(itemsToAdd(txs, [u])).toEqual([{ id: 'a', patch: { items: ['ボックスティッシュ 5箱パック'] } }]);
+  });
+});
+
+describe('ご利用内容', () => {
+  it('is imported and back-filled into older transactions', () => {
+    const msg: ScriptMessage = { id: 'd1', date: Date.parse('2026-10-25'), from: 'statement@vpass.ne.jp', subject: 'ご利用のお知らせ', body: 'ご利用日時：2026/10/25 10:00\nご利用場所：ローソン\nご利用取引：買物\nご利用金額：300円' };
+    const [u] = usagesFromMessages([msg]);
+    expect(usageToTransaction(u, 'auto')).toMatchObject({ memo: 'ローソン', detail: '買物' });
+    const old: Transaction = { id: 'x', date: '2026-10-25', kind: 'expense', amount: 300, memo: 'ローソン', source: 'gmail', createdAt: 0, gmailId: u.key };
+    expect(itemsToAdd([old], [u])).toEqual([{ id: 'x', patch: { detail: '買物' } }]);
+    expect(itemsToAdd([{ ...old, detail: '手で変更' }], [u])).toEqual([]);
+  });
+});

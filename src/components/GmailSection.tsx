@@ -4,13 +4,13 @@ import { appUrl } from '../lib/install';
 import type { ExpenseGroup } from '../types';
 import { useStore } from '../store';
 import { DEFAULT_GMAIL_QUERY, authorize, fetchCardUsages, getProfileEmail, signOut, type MailUsage } from '../lib/gmail';
-import { fetchViaScript, gmailFromShareText, gmailShareUrl, isScriptUrl, newToken, scriptCode, usageToTransaction } from '../lib/gmailScript';
+import { fetchViaScript, gmailFromShareText, gmailShareUrl, isScriptUrl, itemsToAdd, newToken, scriptCode, usageToTransaction } from '../lib/gmailScript';
 import { GROUP_LABEL } from '../lib/categories';
 import { formatDate, today } from '../lib/date';
 import { yen } from '../lib/format';
 
 export function GmailSection() {
-  const { data, updateSettings, addTransactions } = useStore();
+  const { data, updateSettings, addTransactions, updateTransaction } = useStore();
   const g = data.settings.gmail;
   const setG = (patch: Partial<typeof g>) => updateSettings({ gmail: { ...g, ...patch } });
   const [busy, setBusy] = useState('');
@@ -45,6 +45,7 @@ export function GmailSection() {
       setBusy('Gmail を読み取っています…（20秒ほどかかることがあります）');
       const { email, usages } = await fetchViaScript(url, token, g.query);
       if (connecting) setG({ scriptUrl: url.trim(), scriptToken: token, email, autoSince: today() });
+      for (const { id, patch } of itemsToAdd(data.transactions, usages)) updateTransaction(id, patch);
       return usages;
     });
 
@@ -94,7 +95,7 @@ export function GmailSection() {
     <section className="card" id="gmail">
       <h3>✉️ Gmail取り込み（クレジットカード利用通知）</h3>
       <p className="muted small">
-        Gmail に届くカード会社の「ご利用のお知らせ」メールから、利用日・利用先・金額を読み取って明細に追加します。
+        Gmail に届くカード会社の「ご利用のお知らせ」メールから、利用日・利用先・金額を読み取って明細に追加します。Amazon・楽天市場などの注文確認メールが届いていれば、金額と日付が合うものから買った商品名も付けます。
       </p>
 
       <div className="seg small">
@@ -197,7 +198,8 @@ export function GmailSection() {
                     <input type="checkbox" disabled={done} checked={selected.has(u.key) && !done} onChange={() => toggle(u.key)} />
                     <span className="grow">
                       {u.merchant}
-                      <small className="muted"> {formatDate(u.date)} ・ {u.card}{done ? ' ・ 取り込み済み' : ''}</small>
+                      <small className="muted"> {formatDate(u.date)} ・ {u.card}{u.detail ? ` ・ ${u.detail}` : ''}{done ? ' ・ 取り込み済み' : ''}</small>
+                      {u.items?.length ? <small className="tx-items"><br />🛒 {u.items.join('、')}</small> : null}
                     </span>
                     <span className="num">{yen(u.amount)}</span>
                   </label>
