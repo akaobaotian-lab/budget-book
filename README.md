@@ -30,13 +30,40 @@ npm test         # テスト
 npm run build    # dist/ に出力
 ```
 
-### GitHub Pages で公開する
-`main` ブランチに push すると `.github/workflows/deploy.yml` で自動デプロイされます。リポジトリの Settings → Pages → Source を「GitHub Actions」にしてください。
+### 公開（GitHub Pages）
+既定ブランチに push すると `.github/workflows/deploy.yml` が自動でビルド・公開します。
+初回のみ、リポジトリの **Settings → Pages → Build and deployment → Source** を「**GitHub Actions**」にしてください（設定後、Actions タブから「Deploy to GitHub Pages」を Run workflow で再実行）。
+
+公開URL：**https://akaobaotian-lab.github.io/budget-book/**
+
+## アプリとしてインストールする
+
+インストールできるWebアプリ（PWA）になっているので、パソコンではデスクトップアプリ、スマホではホーム画面のアプリとして使えます。オフラインでも起動でき、新しいバージョンは自動で反映されます。アプリ内の「設定 → アプリとしてインストール」にも同じ手順とスマホ用QRコードがあります。
+
+### Windows パソコン（デスクトップにショートカット）
+1. Chrome または Edge で公開URLを開き、画面上部の「📲 インストール」（またはアドレスバー右端のインストールアイコン）を押す
+2. 専用ウィンドウで起動し、スタートメニュー・タスクバーに追加されます
+3. デスクトップのショートカット
+   - Edge：インストール時の「デスクトップ ショートカットを作成する」にチェック
+   - Chrome：通常は自動作成。無い場合は `chrome://apps` を開き、家計簿を右クリック →「ショートカットを作成」→「デスクトップ」にチェック
+
+### Mac
+1. Chrome / Edge で公開URLを開き「インストール」（Safari はメニュー「ファイル → Dockに追加」）
+2. デスクトップに置く場合：Finder の「アプリケーション → Chrome Apps」から家計簿を option+command を押しながらデスクトップへドラッグ
+
+### iPhone / iPad
+1. **Safari** で公開URLを開く（パソコンの「設定」画面のQRコードをカメラで読み取ると簡単）
+2. 共有ボタン →「ホーム画面に追加」→「追加」
+
+### Android
+1. Chrome で公開URLを開き「インストール」（または ⋮ →「アプリをインストール」）
+
+> データは端末ごとに保存されます。パソコンとスマホで同じデータを使うには「設定 → バックアップを保存」で書き出し、もう一方の端末で「バックアップから復元」してください。
 
 ### Gmail取り込みの準備（初回のみ）
 1. [Google Cloud Console](https://console.cloud.google.com/) でプロジェクトを作成し、**Gmail API** を有効化
 2. **OAuth 同意画面** を作成（外部・テスト）し、テストユーザーに自分のGmailを追加
-3. **認証情報 → OAuth クライアント ID → ウェブ アプリケーション** を作成し、「承認済みの JavaScript 生成元」にアプリのURL（例 `https://<ユーザー名>.github.io`、開発時は `http://localhost:5173`）を追加
+3. **認証情報 → OAuth クライアント ID → ウェブ アプリケーション** を作成し、「承認済みの JavaScript 生成元」にアプリのURL（`https://akaobaotian-lab.github.io`、開発時は `http://localhost:5173`）を追加
 4. アプリの「設定」にクライアントIDを貼り付け →「Gmailを登録」でログイン
 5. 「カード利用メールを読み取る」→ 内容を確認して取り込み
 

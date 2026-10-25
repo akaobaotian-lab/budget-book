@@ -299,3 +299,15 @@ details ol { padding-left: 1.4em; margin: 6px 0; line-height: 1.8; }
   .rec-list .grow { flex: 1 1 60%; }
   .rec-actions { flex-basis: 100%; justify-content: flex-end; }
 }
+
+/* インストール */
+.topbar h1 { margin-right: auto; }
+.install-btn { width: 100%; margin: 4px 0 12px; }
+.install-tabs { flex-wrap: wrap; margin-top: 8px; }
+.install-tabs button { flex: 1 1 40%; }
+.install-steps ol { padding-left: 1.4em; margin: 10px 0; line-height: 1.8; }
+kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; font-size: 0.9em; background: var(--bg); }
+.qr { display: flex; gap: 16px; align-items: center; background: var(--bg); padding: 12px; border-radius: 12px; margin: 8px 0; flex-wrap: wrap; }
+.qr img { border-radius: 8px; background: #fff; flex: none; }
+.qr > div { flex: 1 1 200px; min-width: 0; }
+.qr p { margin: 4px 0; }

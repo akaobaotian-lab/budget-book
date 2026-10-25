@@ -5,10 +5,12 @@ import { DEFAULT_GMAIL_QUERY, authorize, fetchCardUsages, getProfileEmail, signO
 import { GROUP_LABEL, defaultGroupFor, guessCategory } from '../lib/categories';
 import { formatDate, today } from '../lib/date';
 import { yen } from '../lib/format';
+import { InstallSection } from './InstallSection';
 
 export function SettingsPage() {
   return (
     <div className="page">
+      <InstallSection />
       <GmailSection />
       <BackupSection />
     </div>

@@ -6,6 +6,7 @@ import { HomePage, KeibaPage, LendingPage, ListPage, MonthPicker, ReportPage, ty
 import { TaxPage } from './components/TaxPage';
 import { RecurringPage } from './components/RecurringPage';
 import { SettingsPage } from './components/SettingsPage';
+import { InstallButton } from './components/InstallSection';
 
 const TABS: [Tab, string, string][] = [
   ['home', '🏠', 'ホーム'],
@@ -20,17 +21,26 @@ const TABS: [Tab, string, string][] = [
 
 const MONTHLY_TABS: Tab[] = ['home', 'list', 'report', 'keiba'];
 
-type Entry = { editing?: Transaction; kind?: Kind; mode?: 'manual' | 'voice' | 'receipt' } | null;
+type Mode = 'manual' | 'voice' | 'receipt';
+type Entry = { editing?: Transaction; kind?: Kind; mode?: Mode } | null;
+
+/** アプリアイコンのショートカット（?add=voice など）から起動された場合 */
+function initialEntry(): Entry {
+  const add = new URLSearchParams(location.search).get('add');
+  if (add !== 'manual' && add !== 'voice' && add !== 'receipt') return null;
+  history.replaceState(null, '', location.pathname);
+  return { mode: add };
+}
 
 export function App() {
   const [tab, setTab] = useState<Tab>('home');
   const [month, setMonth] = useState(currentMonth());
-  const [entry, setEntry] = useState<Entry>(null);
+  const [entry, setEntry] = useState<Entry>(initialEntry);
 
   const props = {
     month,
     onEdit: (t: Transaction) => setEntry({ editing: t }),
-    onAdd: (kind?: Kind, mode?: 'manual' | 'voice' | 'receipt') => setEntry({ kind, mode }),
+    onAdd: (kind?: Kind, mode?: Mode) => setEntry({ kind, mode }),
     go: (t: Tab) => {
       setTab(t);
       window.scrollTo({ top: 0 });
@@ -41,6 +51,7 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <h1>家計簿</h1>
+        <InstallButton onHelp={() => props.go('settings')} />
         {MONTHLY_TABS.includes(tab) && <MonthPicker month={month} setMonth={setMonth} />}
       </header>
 
